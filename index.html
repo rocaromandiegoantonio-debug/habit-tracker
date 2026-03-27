@@ -76,7 +76,7 @@ td {
 .not-done { background:#1f2937; }
 
 td:first-child {
-    width:100px;
+    width:120px;
     text-align:left;
     color:#6ee7b7;
 }
@@ -108,6 +108,15 @@ td:first-child {
     <button onclick="addHabit()">➕</button>
 </div>
 
+<!-- 📅 PLANES -->
+<div class="card">
+    <div style="display:flex; gap:5px;">
+        <input type="number" id="planDay" min="1" max="31" placeholder="Día">
+        <input id="planText" placeholder="Plan futuro">
+        <button onclick="addPlan()">➕ Plan</button>
+    </div>
+</div>
+
 <!-- 📊 GRAFICAS -->
 <div class="graphs">
     <div class="card"><canvas id="lineChart"></canvas></div>
@@ -115,13 +124,11 @@ td:first-child {
 </div>
 
 <table>
-    <thead>
-        <tr id="daysRow"><th>Hábito</th></tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
+<thead><tr id="daysRow"><th>Hábito</th></tr></thead>
+<tbody id="tableBody"></tbody>
 </table>
 
-<!-- MINI ANALISIS -->
+<!-- 📊 ANALISIS -->
 <div class="card" style="margin-top:10px;">
     <div id="dailySummary" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
 </div>
@@ -136,6 +143,30 @@ function getKey(){ return currentDate.getFullYear()+"-"+(currentDate.getMonth()+
 function getData(){ return JSON.parse(localStorage.getItem(getKey()))||{}; }
 function saveData(data){ localStorage.setItem(getKey(),JSON.stringify(data)); }
 
+// PLANES
+function getPlanKey(){
+    return "plans-"+getKey();
+}
+function getPlans(){
+    return JSON.parse(localStorage.getItem(getPlanKey()))||{};
+}
+function savePlans(p){
+    localStorage.setItem(getPlanKey(),JSON.stringify(p));
+}
+
+function addPlan(){
+    let day=document.getElementById("planDay").value;
+    let text=document.getElementById("planText").value.trim();
+    if(!day||!text)return;
+
+    let plans=getPlans();
+    if(!plans[day])plans[day]=[];
+    plans[day].push(text);
+
+    savePlans(plans);
+    document.getElementById("planText").value="";
+}
+
 // DIAS
 function getDaysInMonth(){
     return new Date(currentDate.getFullYear(),currentDate.getMonth()+1,0).getDate();
@@ -144,8 +175,7 @@ function getDaysInMonth(){
 // UI
 function updateMonthLabel(){
     const m=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-    document.getElementById("monthLabel").textContent=
-        m[currentDate.getMonth()]+" "+currentDate.getFullYear();
+    document.getElementById("monthLabel").textContent=m[currentDate.getMonth()]+" "+currentDate.getFullYear();
 }
 
 function generateDays(){
@@ -166,22 +196,27 @@ function createTable(){
     body.innerHTML="";
     let data=getData();
     let days=getDaysInMonth();
+    let plans=getPlans();
+
+    habits=[...new Set(habits)];
 
     habits.forEach((habit,i)=>{
         let tr=document.createElement("tr");
 
         let name=document.createElement("td");
-        name.innerHTML = `
-            ${habit} 
-            <span onclick="deleteHabit(${i})" style="color:red; cursor:pointer;">✖</span>
-        `;
+        name.innerHTML=`${habit} <span onclick="deleteHabit(${i})" style="color:red;">✖</span>`;
         tr.appendChild(name);
 
         for(let d=1;d<=days;d++){
+            if(plans[d]){
+                plans[d].forEach(p=>{
+                    if(!habits.includes(p)) habits.push(p);
+                });
+            }
+
             let td=document.createElement("td");
             let status=data[i]?.[d]?"done":"not-done";
             td.className=status;
-
             if(status==="done") td.textContent="✔";
 
             td.onclick=()=>{
@@ -189,7 +224,7 @@ function createTable(){
                 td.classList.toggle("not-done");
                 td.textContent=td.classList.contains("done")?"✔":"";
 
-                if(!data[i]) data[i]={};
+                if(!data[i])data[i]={};
                 data[i][d]=td.classList.contains("done");
 
                 saveData(data);
@@ -205,28 +240,25 @@ function createTable(){
 
 // ELIMINAR
 function deleteHabit(index){
-    if(!confirm("¿Eliminar hábito?")) return;
+    if(!confirm("Eliminar hábito?"))return;
 
     let data=getData();
     habits.splice(index,1);
 
     let newData={};
-    Object.keys(data).forEach((key,i)=>{
-        if(i!=index){
-            newData[i>index?i-1:i]=data[i];
-        }
+    Object.keys(data).forEach((k,i)=>{
+        if(i!=index)newData[i>index?i-1:i]=data[i];
     });
 
     localStorage.setItem("habitsList",JSON.stringify(habits));
     saveData(newData);
-
     render();
 }
 
 // ADD
 function addHabit(){
     let input=document.getElementById("newHabit");
-    if(!input.value.trim()) return;
+    if(!input.value.trim())return;
 
     habits.push(input.value);
     localStorage.setItem("habitsList",JSON.stringify(habits));
@@ -246,7 +278,7 @@ let pieChart=new Chart(document.getElementById("pieChart"),{
     data:{datasets:[{data:[0,100],backgroundColor:["#10b981","#1f2937"]}]}
 });
 
-// UPDATE GRAFICAS
+// UPDATE
 function updateCharts(){
     let data=getData();
     let days=getDaysInMonth();
@@ -275,7 +307,7 @@ function updateCharts(){
     pieChart.update();
 }
 
-// ANALISIS DIARIO
+// ANALISIS
 function updateDailySummary(){
     let container=document.getElementById("dailySummary");
     container.innerHTML="";
@@ -303,12 +335,7 @@ function updateDailySummary(){
         box.className="dayBox";
         box.style.background=color;
 
-        box.innerHTML=`
-            <div>D${d}</div>
-            <div>✅${done}</div>
-            <div>❌${fail}</div>
-            <div>${percent}%</div>
-        `;
+        box.innerHTML=`D${d}<br>✅${done}<br>❌${fail}<br>${percent}%`;
 
         container.appendChild(box);
     }
@@ -333,10 +360,6 @@ function render(){
 }
 
 render();
-</script>
-
-</body>
-</html>
 </script>
 
 </body>
