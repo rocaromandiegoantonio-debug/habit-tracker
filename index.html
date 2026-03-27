@@ -10,25 +10,23 @@ body {
     font-family: 'Segoe UI', sans-serif;
     background: #020617;
     color: #e2e8f0;
-    margin: 0;
-    padding: 15px;
+    padding: 10px;
 }
 
-/* TITULO */
 h1 {
     text-align: center;
     color: #38bdf8;
-    margin-bottom: 10px;
+    font-size: 20px;
 }
 
 /* INPUT */
 .top-controls {
     text-align: center;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
 }
 
 input {
-    padding: 8px;
+    padding: 6px;
     border-radius: 6px;
     border: none;
     background: #0f172a;
@@ -36,52 +34,45 @@ input {
 }
 
 button {
-    padding: 8px 12px;
+    padding: 6px 10px;
     border: none;
     border-radius: 6px;
     background: #38bdf8;
-    color: black;
     cursor: pointer;
-    margin-left: 5px;
 }
 
 /* DASHBOARD */
 .dashboard {
     display: grid;
     grid-template-columns: 2fr 1fr;
-    gap: 15px;
+    gap: 10px;
 }
 
-/* GRAFICOS */
 .card {
-    background: #020617;
     border: 1px solid #1e293b;
-    border-radius: 10px;
-    padding: 10px;
+    border-radius: 8px;
+    padding: 8px;
 }
 
 canvas {
-    max-height: 220px;
+    max-height: 180px;
 }
 
 /* TABLA */
 table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 10px;
 }
 
-th {
-    background: #020617;
-    color: #94a3b8;
-}
-
+/* CUADRITOS PEQUEÑOS */
 td {
-    height: 20px;
+    width: 12px;
+    height: 12px;
     cursor: pointer;
 }
 
-/* PIXEL STYLE */
+/* COLORES */
 .done {
     background: #22c55e;
 }
@@ -90,35 +81,32 @@ td {
     background: #0f172a;
 }
 
-/* GRID LOOK */
-tbody tr td:not(:first-child) {
-    border: 1px solid #0f172a;
+td:first-child {
+    width: 80px;
+    text-align: left;
+    color: #38bdf8;
 }
 
-tbody tr td:first-child {
-    text-align: left;
-    padding-left: 5px;
-    color: #38bdf8;
+/* GRID PIXEL */
+td:not(:first-child) {
+    border: 1px solid #020617;
 }
 </style>
 </head>
 
 <body>
 
-<h1>📊 HABIT TRACKER</h1>
+<h1>📊 HABIT TRACKER MENSUAL</h1>
 
 <div class="top-controls">
-    <input id="newHabit" placeholder="Nuevo hábito...">
+    <input id="newHabit" placeholder="Nuevo hábito">
     <button onclick="addHabit()">➕</button>
-    <button onclick="resetData()">Reset</button>
 </div>
 
 <div class="dashboard">
-
     <div class="card">
         <canvas id="lineChart"></canvas>
     </div>
-
     <div class="card">
         <canvas id="pieChart"></canvas>
     </div>
@@ -128,20 +116,20 @@ tbody tr td:first-child {
             <thead>
                 <tr>
                     <th>Hábito</th>
-                    <th>L</th><th>M</th><th>X</th><th>J</th><th>V</th><th>S</th><th>D</th>
+                    <!-- 31 días -->
+                    ${Array.from({length:31},(_,i)=>`<th>${i+1}</th>`).join("")}
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
     </div>
-
 </div>
 
 <script>
-let habits = JSON.parse(localStorage.getItem("habitsList")) || ["Gym","Leer","Agua","Estudiar"];
-let savedData = JSON.parse(localStorage.getItem("habitsData")) || [];
+let habits = JSON.parse(localStorage.getItem("habitsList")) || ["Gym","Leer","Agua"];
+let data = JSON.parse(localStorage.getItem("monthData")) || {};
 
-const days = 7;
+const days = 31;
 const tableBody = document.querySelector("#habitTable tbody");
 
 /* CREAR TABLA */
@@ -149,12 +137,12 @@ function createTable() {
     tableBody.innerHTML = "";
 
     habits.forEach((habit, i) => {
-        let row = "<tr><td>" + habit + "</td>";
+        let row = "<tr><td>"+habit+"</td>";
 
-        for (let j = 0; j < days; j++) {
-            let status = savedData[i]?.[j] ? "done" : "not-done";
+        for (let d = 1; d <= days; d++) {
+            let status = data[i]?.[d] ? "done" : "not-done";
 
-            row += `<td class="${status}" onclick="toggle(this, ${i}, ${j})"></td>`;
+            row += `<td class="${status}" onclick="toggle(${i},${d},this)"></td>`;
         }
 
         row += "</tr>";
@@ -163,64 +151,46 @@ function createTable() {
 }
 
 /* TOGGLE */
-function toggle(cell, i, j) {
+function toggle(i, d, cell) {
     cell.classList.toggle("done");
     cell.classList.toggle("not-done");
 
-    if (!savedData[i]) savedData[i] = [];
-    savedData[i][j] = cell.classList.contains("done");
+    if (!data[i]) data[i] = {};
+    data[i][d] = cell.classList.contains("done");
 
-    saveAll();
+    save();
     updateCharts();
 }
 
-/* AÑADIR HABITO */
+/* AÑADIR */
 function addHabit() {
     const input = document.getElementById("newHabit");
-    const value = input.value.trim();
+    if (!input.value.trim()) return;
 
-    if (!value) return;
-
-    habits.push(value);
-    savedData.push([]);
-
+    habits.push(input.value);
     input.value = "";
 
-    saveAll();
+    save();
     createTable();
-    updateCharts();
 }
 
 /* GUARDAR */
-function saveAll() {
-    localStorage.setItem("habitsData", JSON.stringify(savedData));
+function save() {
     localStorage.setItem("habitsList", JSON.stringify(habits));
-}
-
-/* RESET */
-function resetData() {
-    localStorage.clear();
-    habits = ["Gym","Leer","Agua","Estudiar"];
-    savedData = [];
-    createTable();
-    updateCharts();
+    localStorage.setItem("monthData", JSON.stringify(data));
 }
 
 /* GRÁFICOS */
 let lineChart = new Chart(document.getElementById('lineChart'), {
     type: 'line',
     data: {
-        labels: ["L","M","X","J","V","S","D"],
+        labels: Array.from({length:31},(_,i)=>i+1),
         datasets: [{
-            data: [0,0,0,0,0,0,0],
-            borderColor: '#38bdf8',
-            tension: 0.4
+            data: Array(31).fill(0),
+            borderColor: '#38bdf8'
         }]
     },
-    options: {
-        plugins: {legend: {display: false}},
-        scales: {y: {display:false}, x:{color:'#94a3b8'}}
-    }
+    options: {plugins:{legend:{display:false}}}
 });
 
 let pieChart = new Chart(document.getElementById('pieChart'), {
@@ -230,23 +200,20 @@ let pieChart = new Chart(document.getElementById('pieChart'), {
             data: [0,100],
             backgroundColor: ['#22c55e','#ef4444']
         }]
-    },
-    options: {
-        plugins: {legend: {display: false}}
     }
 });
 
-/* ACTUALIZAR */
+/* UPDATE */
 function updateCharts() {
     let total = habits.length * days;
-    let completed = 0;
-    let daily = Array(7).fill(0);
+    let done = 0;
+    let daily = Array(days).fill(0);
 
-    savedData.forEach((row, i) => {
-        row?.forEach((val, j) => {
-            if (val) {
-                completed++;
-                daily[j]++;
+    Object.entries(data).forEach(([i,row])=>{
+        Object.entries(row).forEach(([d,val])=>{
+            if(val){
+                done++;
+                daily[d-1]++;
             }
         });
     });
@@ -254,7 +221,7 @@ function updateCharts() {
     lineChart.data.datasets[0].data = daily;
     lineChart.update();
 
-    pieChart.data.datasets[0].data = [completed, total - completed];
+    pieChart.data.datasets[0].data = [done,total-done];
     pieChart.update();
 }
 
