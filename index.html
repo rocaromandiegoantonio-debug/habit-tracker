@@ -8,110 +8,143 @@
 <style>
 body {
     font-family: 'Segoe UI', sans-serif;
-    background: #0f172a;
-    color: white;
+    background: #020617;
+    color: #e2e8f0;
     margin: 0;
-    padding: 20px;
+    padding: 15px;
 }
 
+/* TITULO */
 h1 {
     text-align: center;
-    margin-bottom: 20px;
+    color: #38bdf8;
+    margin-bottom: 10px;
 }
 
-.container {
-    max-width: 1200px;
-    margin: auto;
-}
-
-.charts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    margin-bottom: 20px;
-}
-
-canvas {
-    background: #1e293b;
-    padding: 10px;
-    border-radius: 15px;
-    flex: 1;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #1e293b;
-    border-radius: 15px;
-    overflow: hidden;
-}
-
-th, td {
-    padding: 12px;
+/* INPUT */
+.top-controls {
     text-align: center;
+    margin-bottom: 15px;
 }
 
-th {
-    background: #334155;
-}
-
-td {
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.done {
-    background-color: #22c55e;
-}
-
-.not-done {
-    background-color: #ef4444;
+input {
+    padding: 8px;
+    border-radius: 6px;
+    border: none;
+    background: #0f172a;
+    color: white;
 }
 
 button {
-    margin-top: 15px;
-    padding: 10px 15px;
+    padding: 8px 12px;
     border: none;
-    border-radius: 10px;
-    background: #3b82f6;
-    color: white;
+    border-radius: 6px;
+    background: #38bdf8;
+    color: black;
     cursor: pointer;
+    margin-left: 5px;
+}
+
+/* DASHBOARD */
+.dashboard {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 15px;
+}
+
+/* GRAFICOS */
+.card {
+    background: #020617;
+    border: 1px solid #1e293b;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+canvas {
+    max-height: 220px;
+}
+
+/* TABLA */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+th {
+    background: #020617;
+    color: #94a3b8;
+}
+
+td {
+    height: 20px;
+    cursor: pointer;
+}
+
+/* PIXEL STYLE */
+.done {
+    background: #22c55e;
+}
+
+.not-done {
+    background: #0f172a;
+}
+
+/* GRID LOOK */
+tbody tr td:not(:first-child) {
+    border: 1px solid #0f172a;
+}
+
+tbody tr td:first-child {
+    text-align: left;
+    padding-left: 5px;
+    color: #38bdf8;
 }
 </style>
 </head>
 
 <body>
 
-<div class="container">
-    <h1>📊 Habit Tracker PRO</h1>
+<h1>📊 HABIT TRACKER</h1>
 
-    <div class="charts">
+<div class="top-controls">
+    <input id="newHabit" placeholder="Nuevo hábito...">
+    <button onclick="addHabit()">➕</button>
+    <button onclick="resetData()">Reset</button>
+</div>
+
+<div class="dashboard">
+
+    <div class="card">
         <canvas id="lineChart"></canvas>
+    </div>
+
+    <div class="card">
         <canvas id="pieChart"></canvas>
     </div>
 
-    <table id="habitTable">
-        <thead>
-            <tr>
-                <th>Hábito</th>
-                <th>L</th><th>M</th><th>X</th><th>J</th><th>V</th><th>S</th><th>D</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <div class="card" style="grid-column: span 2;">
+        <table id="habitTable">
+            <thead>
+                <tr>
+                    <th>Hábito</th>
+                    <th>L</th><th>M</th><th>X</th><th>J</th><th>V</th><th>S</th><th>D</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 
-    <button onclick="resetData()">🔄 Resetear todo</button>
 </div>
 
 <script>
-const habits = ["Gym", "Leer", "Agua", "Estudiar"];
-const days = 7;
-
+let habits = JSON.parse(localStorage.getItem("habitsList")) || ["Gym","Leer","Agua","Estudiar"];
 let savedData = JSON.parse(localStorage.getItem("habitsData")) || [];
 
+const days = 7;
 const tableBody = document.querySelector("#habitTable tbody");
 
-// Crear tabla
+/* CREAR TABLA */
 function createTable() {
     tableBody.innerHTML = "";
 
@@ -129,7 +162,7 @@ function createTable() {
     });
 }
 
-// Toggle + guardar
+/* TOGGLE */
 function toggle(cell, i, j) {
     cell.classList.toggle("done");
     cell.classList.toggle("not-done");
@@ -137,49 +170,76 @@ function toggle(cell, i, j) {
     if (!savedData[i]) savedData[i] = [];
     savedData[i][j] = cell.classList.contains("done");
 
-    localStorage.setItem("habitsData", JSON.stringify(savedData));
-
+    saveAll();
     updateCharts();
 }
 
-// Reset
+/* AÑADIR HABITO */
+function addHabit() {
+    const input = document.getElementById("newHabit");
+    const value = input.value.trim();
+
+    if (!value) return;
+
+    habits.push(value);
+    savedData.push([]);
+
+    input.value = "";
+
+    saveAll();
+    createTable();
+    updateCharts();
+}
+
+/* GUARDAR */
+function saveAll() {
+    localStorage.setItem("habitsData", JSON.stringify(savedData));
+    localStorage.setItem("habitsList", JSON.stringify(habits));
+}
+
+/* RESET */
 function resetData() {
-    localStorage.removeItem("habitsData");
+    localStorage.clear();
+    habits = ["Gym","Leer","Agua","Estudiar"];
     savedData = [];
     createTable();
     updateCharts();
 }
 
-// Gráficos
+/* GRÁFICOS */
 let lineChart = new Chart(document.getElementById('lineChart'), {
     type: 'line',
     data: {
-        labels: ["L", "M", "X", "J", "V", "S", "D"],
+        labels: ["L","M","X","J","V","S","D"],
         datasets: [{
-            label: 'Progreso diario',
             data: [0,0,0,0,0,0,0],
-            borderColor: '#22c55e',
+            borderColor: '#38bdf8',
             tension: 0.4
         }]
+    },
+    options: {
+        plugins: {legend: {display: false}},
+        scales: {y: {display:false}, x:{color:'#94a3b8'}}
     }
 });
 
 let pieChart = new Chart(document.getElementById('pieChart'), {
-    type: 'pie',
+    type: 'doughnut',
     data: {
-        labels: ['Completado', 'Pendiente'],
         datasets: [{
-            data: [0, 100],
-            backgroundColor: ['#22c55e', '#ef4444']
+            data: [0,100],
+            backgroundColor: ['#22c55e','#ef4444']
         }]
+    },
+    options: {
+        plugins: {legend: {display: false}}
     }
 });
 
-// Actualizar gráficos
+/* ACTUALIZAR */
 function updateCharts() {
     let total = habits.length * days;
     let completed = 0;
-
     let daily = Array(7).fill(0);
 
     savedData.forEach((row, i) => {
@@ -198,7 +258,7 @@ function updateCharts() {
     pieChart.update();
 }
 
-// Init
+/* INIT */
 createTable();
 updateCharts();
 </script>
