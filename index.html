@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Habit Tracker PRO</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0f172a;
+    color: white;
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+}
+
+.charts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+canvas {
+    background: #1e293b;
+    padding: 10px;
+    border-radius: 15px;
+    flex: 1;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #1e293b;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 12px;
+    text-align: center;
+}
+
+th {
+    background: #334155;
+}
+
+td {
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.done {
+    background-color: #22c55e;
+}
+
+.not-done {
+    background-color: #ef4444;
+}
+
+button {
+    margin-top: 15px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 10px;
+    background: #3b82f6;
+    color: white;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>📊 Habit Tracker PRO</h1>
+
+    <div class="charts">
+        <canvas id="lineChart"></canvas>
+        <canvas id="pieChart"></canvas>
+    </div>
+
+    <table id="habitTable">
+        <thead>
+            <tr>
+                <th>Hábito</th>
+                <th>L</th><th>M</th><th>X</th><th>J</th><th>V</th><th>S</th><th>D</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <button onclick="resetData()">🔄 Resetear todo</button>
+</div>
+
+<script>
+const habits = ["Gym", "Leer", "Agua", "Estudiar"];
+const days = 7;
+
+let savedData = JSON.parse(localStorage.getItem("habitsData")) || [];
+
+const tableBody = document.querySelector("#habitTable tbody");
+
+// Crear tabla
+function createTable() {
+    tableBody.innerHTML = "";
+
+    habits.forEach((habit, i) => {
+        let row = "<tr><td>" + habit + "</td>";
+
+        for (let j = 0; j < days; j++) {
+            let status = savedData[i]?.[j] ? "done" : "not-done";
+
+            row += `<td class="${status}" onclick="toggle(this, ${i}, ${j})"></td>`;
+        }
+
+        row += "</tr>";
+        tableBody.innerHTML += row;
+    });
+}
+
+// Toggle + guardar
+function toggle(cell, i, j) {
+    cell.classList.toggle("done");
+    cell.classList.toggle("not-done");
+
+    if (!savedData[i]) savedData[i] = [];
+    savedData[i][j] = cell.classList.contains("done");
+
+    localStorage.setItem("habitsData", JSON.stringify(savedData));
+
+    updateCharts();
+}
+
+// Reset
+function resetData() {
+    localStorage.removeItem("habitsData");
+    savedData = [];
+    createTable();
+    updateCharts();
+}
+
+// Gráficos
+let lineChart = new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+        labels: ["L", "M", "X", "J", "V", "S", "D"],
+        datasets: [{
+            label: 'Progreso diario',
+            data: [0,0,0,0,0,0,0],
+            borderColor: '#22c55e',
+            tension: 0.4
+        }]
+    }
+});
+
+let pieChart = new Chart(document.getElementById('pieChart'), {
+    type: 'pie',
+    data: {
+        labels: ['Completado', 'Pendiente'],
+        datasets: [{
+            data: [0, 100],
+            backgroundColor: ['#22c55e', '#ef4444']
+        }]
+    }
+});
+
+// Actualizar gráficos
+function updateCharts() {
+    let total = habits.length * days;
+    let completed = 0;
+
+    let daily = Array(7).fill(0);
+
+    savedData.forEach((row, i) => {
+        row?.forEach((val, j) => {
+            if (val) {
+                completed++;
+                daily[j]++;
+            }
+        });
+    });
+
+    lineChart.data.datasets[0].data = daily;
+    lineChart.update();
+
+    pieChart.data.datasets[0].data = [completed, total - completed];
+    pieChart.update();
+}
+
+// Init
+createTable();
+updateCharts();
+</script>
+
+</body>
+</html>
